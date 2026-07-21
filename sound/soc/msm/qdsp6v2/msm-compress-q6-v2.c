@@ -1,3 +1,10 @@
+/*
+ *
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2014 KYOCERA Corporation
+ * (C) 2015 KYOCERA Corporation
+ *
+ */
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -799,14 +806,22 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 	if (ret < 0)
 		pr_err("%s : Set Volume failed : %d", __func__, ret);
 
+#ifndef CONFIG_KYOCERA_MSND
 	ret = q6asm_set_softpause(ac, &softpause);
 	if (ret < 0)
 		pr_err("%s: Send SoftPause Param failed ret=%d\n",
 				__func__, ret);
+#endif /* CONFIG_KYOCERA_MSND */
 	ret = q6asm_set_softvolume(ac, &softvol);
 	if (ret < 0)
 		pr_err("%s: Send SoftVolume Param failed ret=%d\n",
 				__func__, ret);
+#ifdef CONFIG_KYOCERA_MSND
+	ret = q6asm_set_softpause(ac, &softpause);
+	if (ret < 0)
+		pr_err("%s: Send SoftPause Param failed ret=%d\n",
+				__func__, ret);
+#endif /* CONFIG_KYOCERA_MSND */
 
 	ret = q6asm_set_io_mode(ac, (COMPRESSED_STREAM_IO | ASYNC_IO_MODE));
 	if (ret < 0) {
@@ -1930,7 +1945,11 @@ static int msm_compr_set_metadata(struct snd_compr_stream *cstream,
 		return -EINVAL;
 
 	prtd = cstream->runtime->private_data;
+#ifdef CONFIG_KYOCERA_MSND
+	if (!prtd) {
+#else
 	if (!prtd || !prtd->audio_client) {
+#endif /* CONFIG_KYOCERA_MSND */
 		pr_err("%s: prtd or audio client is NULL\n", __func__);
 		return -EINVAL;
 	}

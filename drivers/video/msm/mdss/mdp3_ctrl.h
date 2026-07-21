@@ -1,3 +1,7 @@
+/*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2016 KYOCERA Corporation
+ */
 /* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -73,5 +77,9 @@ struct mdp3_session_data {
 };
 
 int mdp3_ctrl_init(struct msm_fb_data_type *mfd);
+
+#ifdef CONFIG_DISP_EXT_PP
+int mdp3_csc_config_ext_pp(struct mdp3_session_data *session, struct mdp_csc_cfg_data *data);
+#endif /* CONFIG_DISP_EXT_PP */
 
 #endif /* MDP3_CTRL_H */

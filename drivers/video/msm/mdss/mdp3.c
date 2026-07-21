@@ -1,3 +1,7 @@
+/*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2016 KYOCERA Corporation
+ */
 /* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  * Copyright (C) 2007 Google Incorporated
  *
@@ -2381,7 +2385,7 @@ int mdp3_misr_get(struct mdp_misr *misr_resp)
 	case DISPLAY_MISR_DSI0:
 		MDP3_REG_WRITE(MDP3_REG_DSI_VIDEO_EN, 0);
 		/* Sleep for one vsync after DSI video engine is disabled */
-		msleep(20);
+		usleep(20 * 1000);
 		/* Enable DSI_VIDEO_0 MISR Block */
 		MDP3_REG_WRITE(MDP3_REG_MODE_DSI_PCLK, 0x20);
 		/* Reset MISR Block */
@@ -2525,6 +2529,7 @@ static int mdp3_probe(struct platform_device *pdev)
 		.cb = mdp3_dma_underrun_intr_handler,
 		.data = NULL,
 	};
+	pr_debug("%s: Start\n",__func__);
 
 	if (!pdev->dev.of_node) {
 		pr_err("MDP driver only supports device tree probe\n");
@@ -2626,6 +2631,7 @@ get_util_fail:
 		}
 	}
 
+	pr_debug("%s: End ret=%d\n",__func__,rc);
 	return rc;
 }
 

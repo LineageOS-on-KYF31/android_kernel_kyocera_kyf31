@@ -252,6 +252,7 @@ static struct notifier_block wnb = {
 };
 
 #define NVBIN_FILE "wlan/prima/WCNSS_qcom_wlan_nv.bin"
+#define NVBIN_FILE_DEFAULT "wlan/prima/WCNSS_qcom_wlan_nv_def.bin"
 
 /* On SMD channel 4K of maximum data can be transferred, including message
  * header, so NV fragment size as next multiple of 1Kb is 3Kb.
@@ -2318,9 +2319,14 @@ static void wcnss_nvbin_dnld(void)
 	ret = request_firmware(&nv, NVBIN_FILE, dev);
 
 	if (ret || !nv || !nv->data || !nv->size) {
-		pr_err("wcnss: %s: request_firmware failed for %s (ret = %d)\n",
-			__func__, NVBIN_FILE, ret);
-		goto out;
+		pr_err("wcnss: wcnss_nvbin_dnld_req: request_firmware failed for %s. try %s\n",
+			NVBIN_FILE, NVBIN_FILE_DEFAULT);
+		ret = request_firmware(&nv, NVBIN_FILE_DEFAULT, dev);
+		if (ret || !nv || !nv->data || !nv->size) {
+			pr_err("wcnss: wcnss_nvbin_dnld_req: request_firmware failed for %s\n",
+				NVBIN_FILE_DEFAULT);
+			goto out;
+		}
 	}
 
 	/* First 4 bytes in nv blob is validity bitmap.
@@ -3136,7 +3142,7 @@ static ssize_t wcnss_wlan_write(struct file *fp, const char __user
 		return -EFAULT;
 
 	if ((UINT32_MAX - count < penv->user_cal_rcvd) ||
-	     MAX_CALIBRATED_DATA_SIZE < count + penv->user_cal_rcvd) {
+	     (penv->user_cal_exp_size < count + penv->user_cal_rcvd)) {
 		pr_err(DEVICE " invalid size to write %zu\n", count +
 				penv->user_cal_rcvd);
 		rc = -ENOMEM;

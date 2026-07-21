@@ -861,6 +861,7 @@ static int rtnl_fill_ifinfo(struct sk_buff *skb, struct net_device *dev,
 	struct nlattr *attr, *af_spec;
 	struct rtnl_af_ops *af_ops;
 	struct net_device *upper_dev = netdev_master_upper_dev_get(dev);
+	struct rtnl_link_ifmap map;
 
 	ASSERT_RTNL();
 	nlh = nlmsg_put(skb, pid, seq, type, sizeof(*ifm), flags);
@@ -899,14 +900,14 @@ static int rtnl_fill_ifinfo(struct sk_buff *skb, struct net_device *dev,
 		goto nla_put_failure;
 
 	if (1) {
-		struct rtnl_link_ifmap map = {
-			.mem_start   = dev->mem_start,
-			.mem_end     = dev->mem_end,
-			.base_addr   = dev->base_addr,
-			.irq         = dev->irq,
-			.dma         = dev->dma,
-			.port        = dev->if_port,
-		};
+		memset(&map, 0, sizeof(map));
+		map.mem_start   = dev->mem_start;
+		map.mem_end     = dev->mem_end;
+		map.base_addr   = dev->base_addr;
+		map.irq         = dev->irq;
+		map.dma         = dev->dma;
+		map.port        = dev->if_port;
+
 		if (nla_put(skb, IFLA_MAP, sizeof(map), &map))
 			goto nla_put_failure;
 	}

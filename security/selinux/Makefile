@@ -1,6 +1,13 @@
 #
 # Makefile for building the SELinux module as part of the kernel tree.
 #
+# This software is contributed or developed by KYOCERA Corporation.
+# (C) 2014 KYOCERA Corporation
+# (C) 2015 KYOCERA Corporation
+#
+ifneq ($(TARGET_BUILD_VARIANT),user)
+CFLAGS_hooks.o += -DKC_SELINUX_DEBUG
+endif
 
 obj-$(CONFIG_SECURITY_SELINUX) := selinux.o
 
