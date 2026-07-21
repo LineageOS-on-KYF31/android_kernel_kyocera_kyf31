@@ -110,6 +110,14 @@ enum msm_usb_phy_type {
 	SNPS_FEMTO_PHY,
 };
 
+#ifdef CONFIG_MACH_JALEBI
+#define IDEV_CHG_MAX	750
+#define IDEV_CHG_MIN	500
+#define IUNIT		100
+
+#define IDEV_ACA_CHG_MAX	750
+#define IDEV_ACA_CHG_LIMIT	500
+#else
 #define IDEV_CHG_MAX	1500
 #define IDEV_CHG_MAX_DCP_CDP	960
 #define IDEV_CHG_MIN	500
@@ -117,6 +125,8 @@ enum msm_usb_phy_type {
 
 #define IDEV_ACA_CHG_MAX	1500
 #define IDEV_ACA_CHG_LIMIT	500
+#endif /* CONFIG_MACH_JALEBI */
+#define IDEV_HVDCP_CHG_MAX	1800
 
 /**
  * Different states involved in USB charger detection.
@@ -222,6 +232,22 @@ enum usb_ctrl {
 	NUM_CTRL,
 };
 
+#ifdef CONFIG_MACH_JALEBI
+struct otg_pinctrl_res {
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *gpio_state_active;
+	struct pinctrl_state *gpio_state_suspend;
+};
+#endif
+
+/**
+ * USB ID state
+ */
+enum usb_id_state {
+	USB_ID_GROUND = 0,
+	USB_ID_FLOAT,
+};
+
 /**
  * struct msm_otg_platform_data - platform device data
  *              for msm_otg driver.
@@ -273,6 +299,10 @@ enum usb_ctrl {
  * @bool disable_retention_with_vdd_min: Indicates whether to enable
 		allowing VDDmin without putting PHY into retention.
  * @usb_id_gpio: Gpio used for USB ID detection.
+ * @hub_reset_gpio: Gpio used for hub reset.
+ * @switch_sel_gpio: Gpio used for controlling switch that
+		routing D+/D- from the USB HUB to the USB jack type B
+		for peripheral mode.
  * @bool phy_dvdd_always_on: PHY DVDD is supplied by always on PMIC LDO.
  */
 struct msm_otg_platform_data {
@@ -305,8 +335,14 @@ struct msm_otg_platform_data {
 	bool enable_ahb2ahb_bypass;
 	bool disable_retention_with_vdd_min;
 	int usb_id_gpio;
+	int hub_reset_gpio;
+	int switch_sel_gpio;
 	bool phy_dvdd_always_on;
 	struct clk *system_clk;
+#ifdef CONFIG_MACH_JALEBI
+	int otg5v_en_gpio;
+	struct otg_pinctrl_res pin_res;
+#endif
 };
 
 /* phy related flags */
@@ -420,6 +456,7 @@ struct msm_otg_platform_data {
  * @dbg_idx: Dynamic debug buffer Index.
  * @dbg_lock: Dynamic debug buffer Lock.
  * @buf: Dynamic Debug Buffer.
+ * @id_state: Indicates USBID line status.
  */
 struct msm_otg {
 	struct usb_phy phy;
@@ -561,6 +598,7 @@ struct msm_otg {
 	struct qpnp_vadc_chip	*vadc_dev;
 	int ext_id_irq;
 	bool phy_irq_pending;
+	bool rm_pulldown;
 	wait_queue_head_t	host_suspend_wait;
 /* Maximum debug message length */
 #define DEBUG_MSG_LEN   128UL
@@ -569,6 +607,7 @@ struct msm_otg {
 	unsigned int dbg_idx;
 	rwlock_t dbg_lock;
 	char (buf[DEBUG_MAX_MSG])[DEBUG_MSG_LEN];   /* buffer */
+	enum usb_id_state id_state;
 };
 
 struct ci13xxx_platform_data {

@@ -72,3 +72,4 @@ obj-$(CONFIG_QPNP_MISC) += qpnp-misc.o
 obj-$(CONFIG_QCOM_LIQUID_DOCK)	+= qcom_liquid_dock.o
 obj-y				+= dtvtuner/
 obj-y				+= qcom/
+obj-$(CONFIG_UID_CPUTIME) 	+= uid_cputime.o

@@ -1400,7 +1400,7 @@ static int __init kcj_ram_console_init(void)
 	ecc_info.poly       = 0x11d;
 
 	/* create persistent ram */
-	prz = persistent_ram_new(ADDR_KCJ_RAM_CONSOLE, SIZE_KERNEL_LOG, 0, &ecc_info);
+	prz = persistent_ram_new(ADDR_KCJ_RAM_CONSOLE, SIZE_KERNEL_LOG, 0, &ecc_info, 0);
 	if (IS_ERR(prz)) {
 		int err = PTR_ERR(prz);
 		pr_err( "failed kcjlog persistent_ram err:%d\n", err);

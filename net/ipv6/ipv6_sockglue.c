@@ -111,11 +111,11 @@ struct ipv6_txoptions *ipv6_update_options(struct sock *sk,
 			icsk->icsk_sync_mss(sk, icsk->icsk_pmtu_cookie);
 		}
 		opt = xchg((__force struct ipv6_txoptions **)&inet6_sk(sk)->opt,
-			opt);
+			   opt);
 	} else {
 		spin_lock(&sk->sk_dst_lock);
 		opt = xchg((__force struct ipv6_txoptions **)&inet6_sk(sk)->opt,
-			opt);
+			   opt);
 		spin_unlock(&sk->sk_dst_lock);
 	}
 	sk_dst_reset(sk);
@@ -215,8 +215,8 @@ static int do_ipv6_setsockopt(struct sock *sk, int level, int optname,
 				sk->sk_socket->ops = &inet_dgram_ops;
 				sk->sk_family = PF_INET;
 			}
-			opt = xchg((__force struct ipv6_txoptions **)&np->opt, 
-				NULL);
+			opt = xchg((__force struct ipv6_txoptions **)&np->opt,
+				   NULL);
 			if (opt) {
 				atomic_sub(opt->tot_len, &sk->sk_omem_alloc);
 				txopt_put(opt);

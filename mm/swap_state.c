@@ -43,6 +43,7 @@ static struct backing_dev_info swap_backing_dev_info = {
 struct address_space swapper_spaces[MAX_SWAPFILES] = {
 	[0 ... MAX_SWAPFILES - 1] = {
 		.page_tree	= RADIX_TREE_INIT(GFP_ATOMIC|__GFP_NOWARN),
+		.i_mmap_writable = ATOMIC_INIT(0),
 		.a_ops		= &swap_aops,
 		.backing_dev_info = &swap_backing_dev_info,
 	}
@@ -123,6 +124,7 @@ int __add_to_swap_cache(struct page *page, swp_entry_t entry)
 	if (likely(!error)) {
 		address_space->nrpages++;
 		__inc_zone_page_state(page, NR_FILE_PAGES);
+		__inc_zone_page_state(page, NR_SWAPCACHE);
 		INC_CACHE_INFO(add_total);
 	}
 	spin_unlock_irq(&address_space->tree_lock);
@@ -175,6 +177,7 @@ void __delete_from_swap_cache(struct page *page)
 	ClearPageSwapCache(page);
 	address_space->nrpages--;
 	__dec_zone_page_state(page, NR_FILE_PAGES);
+	__dec_zone_page_state(page, NR_SWAPCACHE);
 	INC_CACHE_INFO(del_total);
 }
 

@@ -161,7 +161,7 @@
 	};
 
 #if 0
-	qcom,camera@1 {
+	qcom_camera1: qcom,camera@1 {
 		cell-index = <1>;
 		compatible = "qcom,camera";
 		reg = <0x1>;
