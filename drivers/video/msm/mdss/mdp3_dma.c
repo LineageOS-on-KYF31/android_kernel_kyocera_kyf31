@@ -670,8 +670,8 @@ retry_dma_done:
 					goto retry_dma_done;
 				}
 				rc = -1;
+				ATRACE_END("mdp3_wait_for_dma_comp");
 			}
-			ATRACE_END("mdp3_wait_for_dma_comp");
 		}
 	}
 	if (dma->update_src_cfg) {
@@ -1196,7 +1196,6 @@ int dsi_video_config(struct mdp3_intf *intf, struct mdp3_intf_cfg *cfg)
 	MDP3_REG_WRITE(MDP3_REG_DSI_VIDEO_CTL_POLARITY, temp);
 
 	v->underflow_color |= 0x80000000;
-	MDP3_REG_WRITE(MDP3_REG_DSI_VIDEO_BORDER_COLOR, v->border_color);
 	MDP3_REG_WRITE(MDP3_REG_DSI_VIDEO_UNDERFLOW_CTL, v->underflow_color);
 
 	return 0;

@@ -186,10 +186,6 @@ struct mdp3_hw_resource {
 	struct regulator *vdd_cx;
 	struct regulator *fs;
 	bool fs_ena;
-	int  clk_ena;
-	bool idle_pc_enabled;
-	bool idle_pc;
-	atomic_t active_intf_cnt;
 	u8 smart_blit_en;
 	bool solid_fill_vote_en;
 };
@@ -240,11 +236,6 @@ int mdp3_dynamic_clock_gating_ctrl(int enable);
 int mdp3_footswitch_ctrl(int enable);
 int mdp3_qos_remapper_setup(struct mdss_panel_data *panel);
 int mdp3_splash_done(struct mdss_panel_info *panel_info);
-int mdp3_autorefresh_disable(struct mdss_panel_info *panel_info);
-
-void mdp3_calc_dma_res(struct mdss_panel_info *panel_info, u64 *clk_rate,
-		u64 *ab, u64 *ib, uint32_t bpp);
-
 
 #define MDP3_REG_WRITE(addr, val) writel_relaxed(val, mdp3_res->mdp_base + addr)
 #define MDP3_REG_READ(addr) readl_relaxed(mdp3_res->mdp_base + addr)
