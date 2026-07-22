@@ -64,5 +64,3 @@ obj-$(CONFIG_DISP_EXT_SUB) += disp_ext_sub_ctrl.o
 obj-$(CONFIG_DISP_EXT_SUB) += disp_ext_sub_panel.o
 obj-$(CONFIG_DISP_EXT_SUB) += disp_ext_sub_dbg.o
 obj-$(CONFIG_DISP_EXT_I2C) += disp_ext_i2c.o
-
-obj-$(CONFIG_FB_MSM_MDSS) += mdss_livedisplay.o
