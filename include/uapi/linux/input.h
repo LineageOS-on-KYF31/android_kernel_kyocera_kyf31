@@ -5,6 +5,10 @@
  * under the terms of the GNU General Public License version 2 as published by
  * the Free Software Foundation.
  */
+/*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2016 KYOCERA Corporation
+ */
 #ifndef _UAPI_INPUT_H
 #define _UAPI_INPUT_H
 
@@ -490,6 +494,8 @@ struct input_keymap_entry {
 #define KEY_GESTURE_SLIDE_V		259
 #define KEY_GESTURE_SLIDE_S		260
 
+#define KEY_SHARP       253
+#define KEY_SIDE        254
 /* Code 255 is reserved for special needs of AT keyboard driver */
 
 #define BTN_MISC		0x100

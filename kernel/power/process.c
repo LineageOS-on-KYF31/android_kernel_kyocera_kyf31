@@ -4,6 +4,10 @@
  *
  * Originally from swsusp.
  */
+/*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2013 KYOCERA Corporation
+ */
 
 
 #undef DEBUG
@@ -228,7 +232,7 @@ void thaw_processes(void)
 	usermodehelper_enable();
 
 	schedule();
-	printk("done.\n");
+	printk("checkpoint: restarting tasks done.\n");
 }
 
 void thaw_kernel_threads(void)

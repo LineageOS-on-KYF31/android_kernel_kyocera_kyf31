@@ -1,4 +1,8 @@
 /*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2016 KYOCERA Corporation
+ */
+/*
  *  Universal power supply monitor class
  *
  *  Copyright © 2007  Anton Vorontsov <cbou@mail.ru>
@@ -170,11 +174,22 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_TYPE, /* use power_supply.type instead */
 	POWER_SUPPLY_PROP_SCOPE,
 	POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL,
+#ifdef CONFIG_OEM_HKADC_USB_TM
+	POWER_SUPPLY_PROP_USB_TEMP_LEVEL,
+#endif
 	POWER_SUPPLY_PROP_RESISTANCE,
 	POWER_SUPPLY_PROP_RESISTANCE_CAPACITIVE,
 	/* unit is in ohms due to ID being typically in kohm range */
 	POWER_SUPPLY_PROP_RESISTANCE_ID,
 	POWER_SUPPLY_PROP_RESISTANCE_NOW,
+	/* OEM added of type `int' */
+	POWER_SUPPLY_PROP_OEM_PA_THERM,
+	POWER_SUPPLY_PROP_OEM_SUBSTRATE_THERM,
+	POWER_SUPPLY_PROP_OEM_USB_THERM,
+	POWER_SUPPLY_PROP_OEM_CAMERA_THERM,
+#ifdef CONFIG_OEM_BMS
+	POWER_SUPPLY_PROP_OEM_BMS_BATT_STATUS,
+#endif
 	/* Local extensions */
 	POWER_SUPPLY_PROP_USB_HC,
 	POWER_SUPPLY_PROP_USB_OTG,
@@ -215,6 +230,8 @@ enum power_supply_type {
 	POWER_SUPPLY_TYPE_YL_BATTERY,	/* yulong add for yl_adc_battery */
 #endif
 	POWER_SUPPLY_TYPE_USB_PARALLEL,		/* USB Parallel Path */
+	POWER_SUPPLY_TYPE_HKADC,    /* OEM HKADC */
+	POWER_SUPPLY_TYPE_OTHER,		/* OtherCharger */
 };
 
 union power_supply_propval {

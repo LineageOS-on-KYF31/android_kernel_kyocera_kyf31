@@ -9,6 +9,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+/* This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2016 KYOCERA Corporation
+ */
 
 #define pr_fmt(fmt) "%s:%d " fmt, __func__, __LINE__
 
@@ -23,6 +26,11 @@ DEFINE_MSM_MUTEX(msm_actuator_mutex);
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 #define MAX_QVALUE  4096
 static struct v4l2_file_operations msm_actuator_v4l2_subdev_fops;
+
+#define PARK_LENS_LONG_STEP 7
+#define PARK_LENS_MID_STEP 5
+#define PARK_LENS_SMALL_STEP 3
+
 
 #define PARK_LENS_LONG_STEP 7
 #define PARK_LENS_MID_STEP 5
@@ -1043,6 +1051,20 @@ static int msm_actuator_close(struct v4l2_subdev *sd,
 		/* check to make sure that init happens before release */
 		pr_err("failed\n");
 		return -EINVAL;
+	}
+	{
+		struct msm_camera_i2c_reg_array i2c_tbl[1];
+		struct msm_camera_i2c_reg_setting reg_setting;
+		i2c_tbl[0].reg_addr = 0xC4;
+		i2c_tbl[0].reg_data = 0x4F;
+		i2c_tbl[0].delay = 0x00;
+		reg_setting.reg_setting = i2c_tbl;
+		reg_setting.size = 1;
+		reg_setting.data_type = a_ctrl->i2c_data_type;
+		rc = a_ctrl->i2c_client.i2c_func_tbl->
+			i2c_write_table_w_microdelay(
+			&a_ctrl->i2c_client, &reg_setting);
+		msleep(240);
 	}
 	if (a_ctrl->act_device_type == MSM_CAMERA_PLATFORM_DEVICE) {
 		rc = a_ctrl->i2c_client.i2c_func_tbl->i2c_util(

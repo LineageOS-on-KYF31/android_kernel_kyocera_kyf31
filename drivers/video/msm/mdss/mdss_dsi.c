@@ -1,3 +1,7 @@
+/*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2016 KYOCERA Corporation
+ */
 /* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -28,6 +32,10 @@
 #include "mdss_panel.h"
 #include "mdss_dsi.h"
 #include "mdss_debug.h"
+#include "disp_ext.h"
+
+#include <linux/pct13xx_display_touch.h>
+struct pct13xx_data *display_touch;
 #include "mdss_livedisplay.h"
 
 #define XO_CLK_RATE	19200000
@@ -90,11 +98,15 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
+	pr_debug("%s+: ctrl=%p\n",__func__,ctrl_pdata);
 	ret = mdss_dsi_panel_reset(pdata, 0);
 	if (ret) {
 		pr_warn("%s: Panel reset failed. rc=%d\n", __func__, ret);
 		ret = 0;
 	}
+
+	if (display_touch)
+		pct13xx_trans_shutdown_mode(display_touch, 1);
 
 	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, false))
 		pr_debug("reset disable: pinctrl not enabled\n");
@@ -123,7 +135,11 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 				__func__, __mdss_dsi_pm_name(i));
 	}
 
+	if (display_touch)
+		pct13xx_trans_shutdown_mode(display_touch, 2);
+
 end:
+	pr_debug("%s-: ret=%d\n",__func__,ret);
 	return ret;
 }
 
@@ -140,6 +156,11 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
+
+	pr_debug("%s+: ctrl=%p\n",__func__,ctrl_pdata);
+
+	if (display_touch)
+		pct13xx_trans_run_mode(display_touch, 1);
 
 	for (i = 0; i < DSI_MAX_PM; i++) {
 		/*
@@ -192,6 +213,9 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 #endif
 	}
 
+	if (display_touch)
+		pct13xx_trans_run_mode(display_touch, 2);
+
 error:
 	if (ret) {
 		for (; i >= 0; i--)
@@ -199,6 +223,7 @@ error:
 				ctrl_pdata->power_data[i].vreg_config,
 				ctrl_pdata->power_data[i].num_vreg, 0);
 	}
+	pr_debug("%s-: ret=%d\n",__func__,ret);
 	return ret;
 }
 
@@ -261,7 +286,7 @@ static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 	return ret;
 }
 
-static void mdss_dsi_put_dt_vreg_data(struct device *dev,
+void mdss_dsi_put_dt_vreg_data(struct device *dev,
 	struct dss_module_power *module_power)
 {
 	if (!module_power) {
@@ -276,7 +301,7 @@ static void mdss_dsi_put_dt_vreg_data(struct device *dev,
 	module_power->num_vreg = 0;
 }
 
-static int mdss_dsi_get_dt_vreg_data(struct device *dev,
+int mdss_dsi_get_dt_vreg_data(struct device *dev,
 	struct dss_module_power *mp, enum dsi_pm_type module)
 {
 	int i = 0, rc = 0;
@@ -1101,6 +1126,7 @@ static int __mdss_dsi_dfps_update_clks(struct mdss_panel_data *pdata,
 			pdata->panel_info.clk_rate / 8;
 	}
 
+	pr_notice("%s: pclk_rate=%d\n", __func__, ctrl_pdata->pclk_rate);
 	return rc;
 }
 
@@ -1310,6 +1336,11 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		rc = mdss_dsi_on(pdata);
 		mdss_dsi_op_mode_config(pdata->panel_info.mipi.mode,
 							pdata);
+#ifdef CONFIG_DISP_EXT_BOARD
+		if (disp_ext_board_detect_board(ctrl_pdata) == -1) {
+			pr_err("%s:disp_ext_board_detect_board err:\n", __func__);
+		}
+#endif /* CONFIG_DISP_EXT_BOARD */
 		break;
 	case MDSS_EVENT_UNBLANK:
 		if (ctrl_pdata->refresh_clk_rate)
@@ -1326,6 +1357,12 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		if (ctrl_pdata->on_cmds.link_state == DSI_HS_MODE)
 			rc = mdss_dsi_unblank(pdata);
 		pdata->panel_info.esd_rdy = true;
+		break;
+	case MDSS_EVENT_PANEL_ON_POST:
+		mdss_dsi_panel_on_post(pdata);
+		break;
+	case MDSS_EVENT_PANEL_ON_POST2:
+		mdss_dsi_panel_on_post2(pdata);
 		break;
 	case MDSS_EVENT_BLANK:
 		power_state = (int) (unsigned long) arg;
@@ -1484,6 +1521,12 @@ end:
 	return dsi_pan_node;
 }
 
+void pct13xx_display_touch(struct pct13xx_data *pct_data)
+{
+	pr_info("%s: Connect Display/Touch\n", __func__);
+	display_touch = pct_data;
+}
+
 static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 {
 	int rc = 0, i = 0;
@@ -1604,7 +1647,7 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		goto error_pan_node;
 	}
 
-	cmd_cfg_cont_splash = mdss_panel_get_boot_cfg() ? true : false;
+	cmd_cfg_cont_splash = mdp3_panel_get_boot_cfg() ? true : false;
 
 	rc = mdss_dsi_panel_init(dsi_pan_node, ctrl_pdata, cmd_cfg_cont_splash);
 	if (rc) {

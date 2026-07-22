@@ -7,6 +7,10 @@
  *  Please see that file for copyright and history logs.
  *
  */
+/*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2015 KYOCERA Corporation
+ */
 
 #include <linux/timekeeper_internal.h>
 #include <linux/module.h>
@@ -22,9 +26,17 @@
 #include <linux/tick.h>
 #include <linux/stop_machine.h>
 #include <linux/pvclock_gtod.h>
+#include <linux/rtc.h>
 
 #include "tick-internal.h"
 #include "ntp_internal.h"
+
+#ifdef KC_BATTERY_LOG_ENABLED
+#include <linux/clog.h>
+#define KCBLOG(tag, ...)  CLOG(tag, ##__VA_ARGS__)
+#else
+#define KCBLOG(tag, ...) do{} while(0)
+#endif
 
 static struct timekeeper timekeeper;
 static DEFINE_RAW_SPINLOCK(timekeeper_lock);
@@ -240,6 +252,16 @@ int pvclock_gtod_unregister_notifier(struct notifier_block *nb)
 }
 EXPORT_SYMBOL_GPL(pvclock_gtod_unregister_notifier);
 
+static void timekeeping_marker(struct timekeeper *tk)
+{
+	struct rtc_time tm;
+
+	rtc_time_to_tm(tk->xtime_sec, &tm);
+	pr_notice("%s %d-%02d-%02d %02d:%02d:%02d.%09llu UTC\n",
+				__func__, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+				tm.tm_hour, tm.tm_min, tm.tm_sec, tk->xtime_nsec);
+}
+
 /* must hold timekeeper_lock */
 static void timekeeping_update(struct timekeeper *tk, bool clearntp, bool mirror)
 {
@@ -252,6 +274,11 @@ static void timekeeping_update(struct timekeeper *tk, bool clearntp, bool mirror
 
 	if (mirror)
 		memcpy(&shadow_timekeeper, &timekeeper, sizeof(timekeeper));
+
+	if (clearntp) {
+		timekeeping_marker(tk);
+	}
+
 }
 
 /**
@@ -904,6 +931,10 @@ static void timekeeping_resume(void)
 	struct timespec ts_new, ts_delta;
 	cycle_t cycle_now, cycle_delta;
 	bool suspendtime_found = false;
+#ifdef KC_BATTERY_LOG_ENABLED
+	struct rtc_time tm_before;
+	struct rtc_time tm_after;
+#endif
 
 	read_persistent_clock(&ts_new);
 
@@ -955,6 +986,10 @@ static void timekeeping_resume(void)
 		suspendtime_found = true;
 	}
 
+#ifdef KC_BATTERY_LOG_ENABLED
+	rtc_time_to_tm(tk->xtime_sec, &tm_before);
+#endif
+
 	if (suspendtime_found)
 		__timekeeping_inject_sleeptime(tk, &ts_delta);
 
@@ -964,8 +999,19 @@ static void timekeeping_resume(void)
 	timekeeping_suspended = 0;
 	timekeeping_update(tk, false, true);
 	write_seqcount_end(&timekeeper_seq);
+#ifdef KC_BATTERY_LOG_ENABLED
+	rtc_time_to_tm(tk->xtime_sec, &tm_after);
+#endif
+	if (suspendtime_found) {
+		timekeeping_marker(tk);
+	}
 	raw_spin_unlock_irqrestore(&timekeeper_lock, flags);
 
+#ifdef KC_BATTERY_LOG_ENABLED
+	KCBLOG("timekeep","%d-%02d-%02d %02d:%02d:%02d -> %d-%02d-%02d %02d:%02d:%02d UTC",
+			tm_before.tm_year + 1900, tm_before.tm_mon + 1, tm_before.tm_mday, tm_before.tm_hour, tm_before.tm_min, tm_before.tm_sec,
+			tm_after.tm_year + 1900, tm_after.tm_mon + 1, tm_after.tm_mday, tm_after.tm_hour, tm_after.tm_min, tm_after.tm_sec);
+#endif
 	touch_softlockup_watchdog();
 
 	clockevents_notify(CLOCK_EVT_NOTIFY_RESUME, NULL);

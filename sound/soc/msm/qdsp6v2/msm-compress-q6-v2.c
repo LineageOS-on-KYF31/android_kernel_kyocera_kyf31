@@ -1071,14 +1071,22 @@ static int msm_compr_configure_dsp_for_playback
 	if (ret < 0)
 		pr_err("%s : Set Volume failed : %d", __func__, ret);
 
+#ifndef CONFIG_KYOCERA_MSND
 	ret = q6asm_set_softpause(ac, &softpause);
 	if (ret < 0)
 		pr_err("%s: Send SoftPause Param failed ret=%d\n",
 				__func__, ret);
+#endif /* CONFIG_KYOCERA_MSND */
 	ret = q6asm_set_softvolume(ac, &softvol);
 	if (ret < 0)
 		pr_err("%s: Send SoftVolume Param failed ret=%d\n",
 				__func__, ret);
+#ifdef CONFIG_KYOCERA_MSND
+	ret = q6asm_set_softpause(ac, &softpause);
+	if (ret < 0)
+		pr_err("%s: Send SoftPause Param failed ret=%d\n",
+				__func__, ret);
+#endif /* CONFIG_KYOCERA_MSND */
 
 	ret = q6asm_set_io_mode(ac, (COMPRESSED_STREAM_IO | ASYNC_IO_MODE));
 	if (ret < 0) {
@@ -2582,7 +2590,11 @@ static int msm_compr_set_metadata(struct snd_compr_stream *cstream,
 		return -EINVAL;
 
 	prtd = cstream->runtime->private_data;
+#ifdef CONFIG_KYOCERA_MSND
+	if (!prtd) {
+#else
 	if (!prtd || !prtd->audio_client) {
+#endif /* CONFIG_KYOCERA_MSND */
 		pr_err("%s: prtd or audio client is NULL\n", __func__);
 		return -EINVAL;
 	}

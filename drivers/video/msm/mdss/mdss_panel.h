@@ -198,6 +198,8 @@ enum mdss_intf_events {
 	MDSS_EVENT_UNBLANK,
 	MDSS_EVENT_PANEL_ON,
 	MDSS_EVENT_POST_PANEL_ON,
+	MDSS_EVENT_PANEL_ON_POST,
+	MDSS_EVENT_PANEL_ON_POST2,
 	MDSS_EVENT_BLANK,
 	MDSS_EVENT_PANEL_OFF,
 	MDSS_EVENT_CLOSE,
@@ -668,6 +670,7 @@ struct mdss_panel_cfg *mdss_panel_intf_type(int intf_val);
  * returns true if bootloader configured, else false
  */
 int mdss_panel_get_boot_cfg(void);
+int mdp3_panel_get_boot_cfg(void);
 
 /**
  * mdss_is_ready() - checks if mdss is probed and ready

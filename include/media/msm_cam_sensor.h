@@ -1,3 +1,8 @@
+/*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2016 KYOCERA Corporation
+ */
+
 #ifndef __LINUX_MSM_CAM_SENSOR_H
 #define __LINUX_MSM_CAM_SENSOR_H
 
@@ -404,6 +409,7 @@ enum msm_sensor_cfg_type_t {
 #ifdef CONFIG_MACH_YULONG
 	CFG_UPDATE_OTP,
 #endif
+	CFG_GET_EXPOSURE,
 };
 
 enum msm_actuator_cfg_type_t {

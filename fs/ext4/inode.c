@@ -17,6 +17,11 @@
  *
  *  Assorted race fixes, rewrite of ext4_get_block() by Al Viro, 2000
  */
+/*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2014 KYOCERA Corporation
+ * (C) 2015 KYOCERA Corporation
+ */
 
 #include <linux/fs.h>
 #include <linux/time.h>
@@ -2585,7 +2590,7 @@ retry:
 					    needed_blocks);
 		if (IS_ERR(handle)) {
 			ret = PTR_ERR(handle);
-			ext4_msg(inode->i_sb, KERN_CRIT, "%s: jbd2_start: "
+			ext4_msg(inode->i_sb, KERN_DEBUG, "%s: jbd2_start: "
 			       "%ld pages, ino %lu; err %d", __func__,
 				wbc->nr_to_write, inode->i_ino, ret);
 			blk_finish_plug(&plug);

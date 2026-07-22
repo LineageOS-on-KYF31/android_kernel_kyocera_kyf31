@@ -23,6 +23,7 @@
 #include <linux/err.h>
 
 #include "mdss_dsi.h"
+#include "disp_ext.h"
 #include "mdss_livedisplay.h"
 
 #define DT_CMD_HDR 6
@@ -159,6 +160,8 @@ void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	struct dcs_cmd_req cmdreq;
 	struct mdss_panel_info *pinfo;
 
+	pr_debug("%s+: cmd_cnt=%d\n",__func__,pcmds->cmd_cnt);
+
 	pinfo = &(ctrl->panel_data.panel_info);
 	if (pinfo->dcs_cmd_by_left) {
 		if (ctrl->ndx != DSI_CTRL_LEFT)
@@ -180,6 +183,7 @@ void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	cmdreq.cb = NULL;
 
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+	pr_debug("%s-:\n",__func__);
 }
 
 static char led_pwm1[2] = {0x51, 0x0};	/* DTYPE_DCS_WRITE1 */
@@ -670,11 +674,76 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 			goto end;
 	}
 
+#ifdef CONFIG_DISP_EXT_BOARD
+	if (disp_ext_board_detect_board(ctrl) == -1) {
+		pr_err("%s:disp_ext_board_detect_board err:\n", __func__);
+	}
+#endif /* CONFIG_DISP_EXT_BOARD */
+
 	if (ctrl->on_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->on_cmds);
 
 end:
 	pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
+	pr_debug("%s:-\n", __func__);
+	return 0;
+}
+
+int mdss_dsi_panel_on_post(struct mdss_panel_data *pdata)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+	pr_debug("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
+
+
+	if (ctrl->on_post_cmds.cmd_cnt &&
+		!pdata->panel_info.cont_splash_enabled) {
+		mdss_dsi_panel_cmds_send(ctrl, &ctrl->on_post_cmds);
+		ctrl->on_post_time = ktime_get();
+	}
+
+	pr_debug("%s:-\n", __func__);
+	return 0;
+}
+
+int mdss_dsi_panel_on_post2(struct mdss_panel_data *pdata)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+	pr_debug("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
+
+	if (ctrl->on_post2_cmds.cmd_cnt &&
+		!pdata->panel_info.cont_splash_enabled) {
+		s64 on_post_wait;
+
+		on_post_wait = ktime_to_us(ktime_sub(ctrl->on_post_time, ktime_get()));
+		if (on_post_wait > 0) {
+			pr_err("ctrl->on_post_time is invalid\n");
+			on_post_wait = 0;
+		}
+		on_post_wait += 120 * 1000;
+		pr_debug("%s on_post_wait: %ld us\n", __func__, (long)on_post_wait);
+		if (on_post_wait > 0)
+			usleep(on_post_wait);
+		mdss_dsi_panel_cmds_send(ctrl, &ctrl->on_post2_cmds);
+	}
+
 	pr_debug("%s:-\n", __func__);
 	return 0;
 }
@@ -1994,6 +2063,12 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->on_cmds,
 		"qcom,mdss-dsi-on-command", "qcom,mdss-dsi-on-command-state");
 
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->on_post_cmds,
+		"qcom,mdss-dsi-on-post-command", "qcom,mdss-dsi-on-post-command-state");
+
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->on_post2_cmds,
+		"qcom,mdss-dsi-on-post2-command", "qcom,mdss-dsi-on-post2-command-state");
+
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->post_panel_on_cmds,
 		"qcom,mdss-dsi-post-panel-on-command", NULL);
 
@@ -2067,6 +2142,10 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_panel_horizintal_line_idle(np, ctrl_pdata);
 
 	mdss_dsi_parse_dfps_config(np, ctrl_pdata);
+
+#ifdef CONFIG_DISP_EXT_PP
+	disp_ext_parse_pp(np, &ctrl_pdata->pp_info);
+#endif /* CONFIG_DISP_EXT_PP */
 
 	mdss_livedisplay_parse_dt(np, pinfo);
 

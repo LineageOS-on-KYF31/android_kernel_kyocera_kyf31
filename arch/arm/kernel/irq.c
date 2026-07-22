@@ -21,6 +21,11 @@
  *  IRQ's are in fact implemented a bit like signal handlers for the kernel.
  *  Naturally it's not a 1:1 relation, but there are similarities.
  */
+/*
+ * This software is contributed or developed by KYOCERA Corporation.
+ * (C) 2014 KYOCERA Corporation
+ * (C) 2016 KYOCERA Corporation
+ */
 #include <linux/kernel_stat.h>
 #include <linux/signal.h>
 #include <linux/ioport.h>

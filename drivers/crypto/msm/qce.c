@@ -1954,6 +1954,8 @@ int qce_aead_req(void *handle, struct qce_req *q_req)
 
 	if ((q_req->cryptlen > UINT_MAX - ivsize) ||
 		(q_req->cryptlen + ivsize > UINT_MAX - areq->assoclen)) {
+	if ((q_req->cryptlen > UINT_MAX - ivsize) ||
+		(q_req->cryptlen + ivsize > UINT_MAX - areq->assoclen)) {
 		pr_err("Integer overflow on total aead req length.\n");
 		return -EINVAL;
 	}

@@ -3177,7 +3177,11 @@ static ssize_t afe_debug_write(struct file *filp,
 
 	lbuf[cnt] = '\0';
 
-	if (!strcmp(lb_str, "afe_loopback")) {
+#ifdef CONFIG_KYOCERA_MSND
+	if (!strncmp(lb_str, "afe_loopback", 17)) {
+#else /* CONFIG_KYOCERA_MSND */
+	if (!strncmp(lb_str, "afe_loopback", 12)) {
+#endif /* CONFIG_KYOCERA_MSND */
 		rc = afe_get_parameters(lbuf, param, 3);
 		if (!rc) {
 			pr_info("%s: %lu %lu %lu\n", lb_str, param[0], param[1],
