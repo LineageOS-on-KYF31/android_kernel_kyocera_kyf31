@@ -71,7 +71,6 @@ next_tag:
 	/* Extract a tag from the data */
 	tag = data[dp++];
 	if (tag == ASN1_EOC) {
-	if (tag == ASN1_EOC) {
 		/* It appears to be an EOC. */
 		if (data[dp++] != 0)
 			goto invalid_eoc;

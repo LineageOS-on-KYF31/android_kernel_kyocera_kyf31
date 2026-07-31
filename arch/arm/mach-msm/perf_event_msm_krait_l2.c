@@ -27,7 +27,6 @@
 struct pmu_constraints {
 	u64 pmu_bitmap;
 	u8 codes[PMU_CODES_SIZE];
-	u8 codes[PMU_CODES_SIZE];
 	raw_spinlock_t lock;
 } l2_pmu_constraints = {
 	.pmu_bitmap = 0,
@@ -431,7 +430,6 @@ static int msm_l2_test_set_ev_constraint(struct perf_event *event)
 	u8 code = (evt_type & 0x00FF0) >> 4;
 	unsigned long flags;
 	int err = 0;
-	int err = 0;
 	u64 bitmap_t;
 	u32 shift_idx;
 	if (evt_prefix == L2_TRACECTR_PREFIX)
@@ -476,7 +474,6 @@ static int msm_l2_test_set_ev_constraint(struct perf_event *event)
 			if (!(event->cpu < 0)) {
 				event->state = PERF_EVENT_STATE_OFF;
 				event->attr.constraint_duplicate = 1;
-				err = -EPERM;
 				err = -EPERM;
 			}
 	}
