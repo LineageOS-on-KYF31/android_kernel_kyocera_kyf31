@@ -38,11 +38,11 @@
 #include <linux/bug.h>
 
 #ifdef CONFIG_OEM_BMS
-#include <oem-bms.h>
+#include "oem-bms.h"
 #endif
 
 #ifdef CONFIG_OEM_HKADC_USB_TM
-#include <oem-hkadc_usb_tm.h>
+#include "oem-hkadc_usb_tm.h"
 #endif
 
 #include <linux/qpnp/qpnp-adc.h>
@@ -398,8 +398,6 @@ struct smb135x_chg {
 	int				dc_health;
 	u8				irq_cfg_mask[3];
 	int				otg_oc_count;
-	struct delayed_work		reset_otg_oc_count_work;
-	struct mutex			otg_oc_count_lock;
 
 	bool				parallel_charger;
 	bool				parallel_charger_present;
@@ -575,9 +573,7 @@ static int smb135x_read(struct smb135x_chg *chip, int reg,
 		return 0;
 	}
 	mutex_lock(&chip->read_write_lock);
-	pm_stay_awake(chip->dev);
 	rc = __smb135x_read(chip, reg, val);
-	pm_relax(chip->dev);
 	mutex_unlock(&chip->read_write_lock);
 
 	return rc;
@@ -592,9 +588,7 @@ static int smb135x_write(struct smb135x_chg *chip, int reg,
 		return 0;
 
 	mutex_lock(&chip->read_write_lock);
-	pm_stay_awake(chip->dev);
 	rc = __smb135x_write(chip, reg, val);
-	pm_relax(chip->dev);
 	mutex_unlock(&chip->read_write_lock);
 
 	return rc;
@@ -1949,13 +1943,6 @@ static int smb135x_parallel_set_chg_present(struct smb135x_chg *chip,
 	}
 
 	if (present) {
-		/* Check if SMB135x is present */
-		rc = smb135x_read(chip, VERSION1_REG, &val);
-		if (rc) {
-			pr_debug("Failed to detect smb135x-parallel charger may be absent\n");
-			return -ENODEV;
-		}
-
 		rc = smb135x_enable_volatile_writes(chip);
 		if (rc < 0) {
 			dev_err(chip->dev,
@@ -2232,7 +2219,6 @@ static int smb135x_chg_otg_enable(struct smb135x_chg *chip)
 	int rc = 0;
 	int restart_count = 0;
 	struct timeval time_a, time_b, time_c, time_d;
-	u8 reg;
 
 	if (chip->revision == REV_2) {
 		/*
@@ -2310,21 +2296,6 @@ restart_from_disable:
 			goto restart_from_disable;
 		}
 	} else {
-		rc = smb135x_read(chip, CMD_CHG_REG, &reg);
-		if (rc < 0) {
-			dev_err(chip->dev, "Couldn't read cmd reg rc=%d\n",
-					rc);
-			return rc;
-		}
-		if (reg & OTG_EN) {
-			/* if it is set, disable it before re-enabling it */
-			rc = smb135x_masked_write(chip, CMD_CHG_REG, OTG_EN, 0);
-			if (rc < 0) {
-				dev_err(chip->dev, "Couldn't disable OTG mode rc=%d\n",
-						rc);
-				return rc;
-			}
-		}
 		rc = smb135x_masked_write(chip, CMD_CHG_REG, OTG_EN, OTG_EN);
 		if (rc < 0) {
 			dev_err(chip->dev, "Couldn't enable OTG mode rc=%d\n",
@@ -2354,9 +2325,6 @@ static int smb135x_chg_otg_regulator_disable(struct regulator_dev *rdev)
 	int rc = 0;
 	struct smb135x_chg *chip = rdev_get_drvdata(rdev);
 
-	mutex_lock(&chip->otg_oc_count_lock);
-	cancel_delayed_work_sync(&chip->reset_otg_oc_count_work);
-	mutex_unlock(&chip->otg_oc_count_lock);
 	rc = smb135x_masked_write(chip, CMD_CHG_REG, OTG_EN, 0);
 	if (rc < 0)
 		dev_err(chip->dev, "Couldn't disable OTG mode rc=%d\n", rc);
@@ -2800,27 +2768,11 @@ static int rid_handler(struct smb135x_chg *chip, u8 rt_stat)
 	return 0;
 }
 
-#define RESET_OTG_OC_COUNT_MS	100
-static void reset_otg_oc_count_work(struct work_struct *work)
-{
-	struct smb135x_chg *chip =
-		container_of(work, struct smb135x_chg,
-				reset_otg_oc_count_work.work);
-
-	mutex_lock(&chip->otg_oc_count_lock);
-	pr_debug("It has been %dmS since OverCurrent interrupt resetting the count\n",
-			RESET_OTG_OC_COUNT_MS);
-	chip->otg_oc_count = 0;
-	mutex_unlock(&chip->otg_oc_count_lock);
-}
-
 #define MAX_OTG_RETRY	3
 static int otg_oc_handler(struct smb135x_chg *chip, u8 rt_stat)
 {
 	int rc;
 
-	mutex_lock(&chip->otg_oc_count_lock);
-	cancel_delayed_work_sync(&chip->reset_otg_oc_count_work);
 	++chip->otg_oc_count;
 	if (chip->otg_oc_count < MAX_OTG_RETRY) {
 		rc = smb135x_chg_otg_enable(chip);
@@ -2833,9 +2785,6 @@ static int otg_oc_handler(struct smb135x_chg *chip, u8 rt_stat)
 	}
 
 	pr_debug("rt_stat = 0x%02x\n", rt_stat);
-	schedule_delayed_work(&chip->reset_otg_oc_count_work,
-			msecs_to_jiffies(RESET_OTG_OC_COUNT_MS));
-	mutex_unlock(&chip->otg_oc_count_lock);
 	return 0;
 }
 
@@ -4595,13 +4544,12 @@ static int smb135x_main_charger_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&chip->wireless_insertion_work,
 					wireless_insertion_work);
 
-	INIT_DELAYED_WORK(&chip->reset_otg_oc_count_work,
-					reset_otg_oc_count_work);
+	INIT_DELAYED_WORK(&chip->oem_src_detect_work, oem_src_detect_retry_work);
+
+
 	mutex_init(&chip->path_suspend_lock);
 	mutex_init(&chip->current_change_lock);
 	mutex_init(&chip->read_write_lock);
-	mutex_init(&chip->otg_oc_count_lock);
-	device_init_wakeup(chip->dev, true);
 	/* probe the device to check if its actually connected */
 	rc = smb135x_read(chip, CFG_4_REG, &reg);
 	if (rc) {
