@@ -45,7 +45,7 @@
 #include <soc/qcom/oem_fact.h>
 
 #ifdef CONFIG_OEM_BMS
-#include <oem-bms.h>
+#include "oem-bms.h"
 #endif
 
 #define _BMS_MASK(BITS, POS) \
@@ -2181,7 +2181,13 @@ static void voltage_soc_timeout_work(struct work_struct *work)
 	mutex_lock(&chip->bms_device_mutex);
 	if (!chip->bms_dev_open) {
 		pr_warn("BMS device not opened, using voltage based SOC\n");
+
+		mutex_lock(&chip->last_soc_mutex);
 		chip->dt.cfg_use_voltage_soc = true;
+		calculate_soc_from_voltage(chip);   /* populate prev_voltage_based_soc NOW */
+		mutex_unlock(&chip->last_soc_mutex);
+
+		schedule_delayed_work(&chip->monitor_soc_work, 0);
 	}
 	mutex_unlock(&chip->bms_device_mutex);
 }
