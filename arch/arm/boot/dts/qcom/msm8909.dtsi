@@ -119,6 +119,14 @@
 			label = "kc_mem";
 		};
 
+		pstore_reserve_mem: pstore_reserve_region@0 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			linux,remove-completely;
+			reg = <0x0 0x8ef00000 0x0 0x00100000>;
+			label = "pstore_reserve_mem";
+		};
+
 		venus_qseecom_mem: venus_qseecom_region@0 {
 			linux,reserve-contiguous-region;
 			linux,memory-limit = <0x90000000>;
@@ -161,6 +169,18 @@
 	#size-cells = <1>;
 	ranges = <0 0 0 0xffffffff>;
 	compatible = "simple-bus";
+
+	ramoops {
+		compatible = "ramoops";
+		status = "ok";
+
+		android,ramoops-buffer-start = <0x8ef00000>;
+		android,ramoops-buffer-size = <0x100000>;
+		android,ramoops-console-size = <0x40000>;
+		android,ramoops-pmsg-size = <0x40000>;
+		android,ramoops-record-size = <0x20000>;
+		android,ramoops-dump-oops = <0x1>;
+	};
 
 	intc: interrupt-controller@b000000 {
 		compatible = "qcom,msm-qgic2";
